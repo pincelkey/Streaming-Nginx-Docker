@@ -1,0 +1,56 @@
+version: '3.7'
+
+services:
+  nginx-proxy:
+    image: jwilder/nginx-proxy
+    container_name: nginx-proxy
+    networks:
+      - red
+    restart: always
+    environment:
+      DEFAULT_HOST: ${domain}
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - /var/run/docker.sock:/tmp/docker.sock:ro
+      - ./config/nginx.conf:/etc/nginx/conf.d/nginx.conf:ro
+      - ./certs:/etc/nginx/certs:ro
+      - ./vhostd:/etc/nginx/vhost.d
+      - ./html:/usr/share/nginx/html
+    labels:
+      - com.github.jrcs.letsencrypt_nginx_proxy_companion.nginx_proxy
+
+  letsencrypt:
+    image: jrcs/letsencrypt-nginx-proxy-companion
+    container_name: nginx-proxy-companion
+    networks:
+      - red
+    restart: always
+    environment:
+      - NGINX_PROXY_CONTAINER=nginx-proxy
+    volumes:
+      - ./certs:/etc/nginx/certs:rw
+      - ./vhostd:/etc/nginx/vhost.d
+      - ./html:/usr/share/nginx/html
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+
+  livestream:
+    image: jasonrivers/nginx-rtmp
+    container_name: livestream
+    restart: always
+    networks:
+      - red
+    ports:
+      - "1935:1935"
+    volumes:
+      - ./web/public:/opt/nginx/html:ro
+      - ./web/config:/opt/nginx/conf/
+    environment:
+      VIRTUAL_HOST: ${domain}
+      LETSENCRYPT_HOST: ${domain}
+      LETSENCRYPT_EMAIL: ${email}
+
+networks:
+  red:
+    driver: "bridge"

@@ -1,0 +1,5 @@
+web/public/*
+.env
+html/
+certs/
+vhostd/
